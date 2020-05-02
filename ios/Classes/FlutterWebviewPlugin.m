@@ -133,7 +133,16 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         rc = self.viewController.view.bounds;
     }
 
+
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
+    configuration.processPool = [[WKProcessPool alloc] init];
+    NSString *sessid = [[[NSUserDefaults alloc] init] stringForKey:@"sessid"];
+    if (sessid != NULL){
+        NSString *scriptSource = [NSString stringWithFormat:@"document.cookie = 'sessid=%@;path=/';", sessid];
+        WKUserScript *script = [[WKUserScript alloc] initWithSource:scriptSource injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:true];
+        [userContentController addUserScript:script];
+    }
+
     configuration.userContentController = userContentController;
     self.webview = [[WKWebView alloc] initWithFrame:rc configuration:configuration];
     self.webview.UIDelegate = self;
@@ -216,6 +225,11 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
                 if (headers != nil) {
                     [request setAllHTTPHeaderFields:headers];
                 }
+                NSString *sessid = [[[NSUserDefaults alloc] init] stringForKey:@"sessid"];
+                if (sessid != NULL){
+                    NSString *value = [NSString stringWithFormat:@"sessid=%@",sessid];
+                    [request setValue:value forHTTPHeaderField:@"Cookie"];
+                }
 
                 [self.webview loadRequest:request];
             }
@@ -266,8 +280,8 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
 
 - (void)reloadUrl:(FlutterMethodCall*)call {
     if (self.webview != nil) {
-		NSString *url = call.arguments[@"url"];
-		NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
+        NSString *url = call.arguments[@"url"];
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
         NSDictionary *headers = call.arguments[@"headers"];
         
         if (headers != nil) {
